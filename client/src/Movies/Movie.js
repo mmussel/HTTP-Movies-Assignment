@@ -1,69 +1,57 @@
-import React from "react";
-import axios from "axios";
-import MovieCard from "./MovieCard";
+import React, { useEffect, useState } from 'react';
+import axios from 'axios';
+import { useRouteMatch, useHistory } from 'react-router-dom';
+import MovieCard from './MovieCard';
 
-export default class Movie extends React.Component {
-  constructor(props) {
-    super(props);
-    this.state = {
-      movie: null
-    };
-  }
+function Movie(props) {
+  const [movie, setMovie] = useState(null);
+  const match = useRouteMatch();
+  const { push } = useHistory();
 
-  componentDidMount() {
-    this.fetchMovie(this.props.match.params.id);
-  }
-
-  componentWillReceiveProps(newProps) {
-    if (this.props.match.params.id !== newProps.match.params.id) {
-      this.fetchMovie(newProps.match.params.id);
-    }
-  }
-
-  fetchMovie = id => {
+  const fetchMovie = id => {
     axios
       .get(`http://localhost:5000/api/movies/${id}`)
-      .then(res => this.setState({ movie: res.data }))
-      .catch(err => console.log(err.response));
+      .then(res => setMovie(res.data))
+      .catch(err => console.log(err));
   };
-
-  saveMovie = () => {
-    const addToSavedList = this.props.addToSavedList;
-    addToSavedList(this.state.movie);
-  };
-
-  updateMovies = event => {
-    // takes an event and prevents the refresh of the page
-    event.preventDefault();
-    // pushes you to the movie's id that you updated
-    this.props.history.push(`/update-movie/${this.state.movie.id}`)
-  };
-
-  deleteMovie = event => {
-    event.preventDefault();
-    axios.delete(`http://localhost:5000/api/movies/${this.state.movie.id}`)
-      .then(res => {
-        console.log(`${this.state.movie.title} has been deleted from the API.`)
-      })
-      .catch(err => {
-        console.log(err.response)
-      })
+  
+  const routeToUpdateForm = e => {
+    e.preventDefault();
+    console.log(props);
+    push(`/update-movie/${movie.id}`);
   }
 
-  render() {
-    if (!this.state.movie) {
-      return <div>Loading movie information...</div>;
-    }
+  const deleteMovie = (e, id) => {
+    e.preventDefault();
+    axios.delete(`http://localhost:5000/api/movies/${movie.id}`)
+    .then(response => {
+      props.setMovieList(props.movies.filter(el => el.id !== response.data));
+      push('/')
+    })
+  }
 
-    return (
-      <div className="save-wrapper">
-        <MovieCard movie={this.state.movie} />
-        <div className="save-button" onClick={this.saveMovie}>
-          Save
-        </div>
-        <button onClick={this.updateMovies}>Edit</button>
-        <button onClick={this.deleteMovie}>Delete</button>
+  const saveMovie = () => {
+    props.addToSavedList(movie);
+  };
+
+  useEffect(() => {
+    fetchMovie(match.params.id);
+  }, [match.params.id]);
+
+  if (!movie) {
+    return <div>Loading movie information...</div>;
+  }
+
+  return (
+    <div className='save-wrapper'>
+      <MovieCard movie={movie} />
+      <div className='save-button' onClick={saveMovie}>
+        Save
       </div>
-    );
-  }
+      <button onClick={routeToUpdateForm}>Update</button>
+      <button onClick={deleteMovie}>Delete Movie</button>
+    </div>
+  );
 }
+
+export default Movie;
